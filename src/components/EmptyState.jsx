@@ -1,0 +1,8 @@
+const EmptyState = ({ title, description }) => (
+  <div className="card text-center">
+    <h3 className="text-lg font-semibold">{title}</h3>
+    <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{description}</p>
+  </div>
+)
+
+export default EmptyState
