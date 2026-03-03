@@ -3045,10 +3045,15 @@
         function getBackendCandidates() {
             const fromWindow = (window.ECOTRACK_BACKEND_URL || '').trim();
             const fromStorage = (localStorage.getItem('ecotrackBackendUrl') || '').trim();
+            const host = window.location.hostname;
+            const sameHostHttp = host ? `http://${host}:8000` : '';
+            const sameHostHttps = host ? `https://${host}:8000` : '';
             const seed = [
                 activeBackendBaseUrl,
                 fromWindow,
                 fromStorage,
+                sameHostHttp,
+                sameHostHttps,
                 AUTH_BACKEND_BASE_URL,
                 PAYMENT_BACKEND_BASE_URL,
                 'http://localhost:8000',
