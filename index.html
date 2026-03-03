@@ -425,6 +425,31 @@
             border-color: var(--forest-green);
         }
 
+        .password-field {
+            position: relative;
+        }
+
+        .password-field input {
+            padding-right: 46px;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            border: none;
+            background: transparent;
+            color: var(--gray-600);
+            cursor: pointer;
+            font-size: 16px;
+            padding: 4px;
+        }
+
+        .password-toggle:hover {
+            color: var(--forest-green);
+        }
+
         .role-selector {
             display: flex;
             gap: 16px;
@@ -471,24 +496,6 @@
             font-weight: 600;
         }
 
-        .captcha-target {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: var(--white);
-            border: 1px solid var(--gray-300);
-            border-radius: 999px;
-            padding: 6px 10px;
-            font-size: 13px;
-            font-weight: 700;
-            color: var(--forest-green);
-            margin-bottom: 10px;
-        }
-
-        .captcha-slider {
-            width: 100%;
-        }
-
         .captcha-status {
             font-size: 12px;
             font-weight: 700;
@@ -502,6 +509,20 @@
 
         .captcha-status.error {
             color: var(--danger);
+        }
+
+        .text-captcha-code {
+            font-family: "Courier New", monospace;
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: 5px;
+            color: var(--forest-green);
+            background: #eef6ec;
+            border: 1px dashed #96b992;
+            border-radius: 8px;
+            padding: 10px 12px;
+            text-align: center;
+            user-select: none;
         }
 
         .otp-box {
@@ -522,6 +543,7 @@
             flex: 1;
             min-width: 0;
         }
+
 
         /* ========== DASHBOARD ========== */
         .dashboard {
@@ -2057,7 +2079,7 @@
     </nav>
 
     <!-- AUTH PAGE -->
-    <div id="authPage" class="auth-container">
+    <div id="authPage" class="auth-container hidden">
         <div class="auth-box fade-in">
             <div class="auth-header">
                 <h1><i class="fas fa-leaf"></i> EcoTrack</h1>
@@ -2065,27 +2087,30 @@
             </div>
 
             <div class="auth-tabs">
-                <button class="auth-tab active" onclick="switchAuthTab('login', this)">Login</button>
-                <button class="auth-tab" onclick="switchAuthTab('signup', this)">Sign Up</button>
+                <button type="button" class="auth-tab active" onclick="switchAuthTab('login', this)">Login</button>
+                <button type="button" class="auth-tab" onclick="switchAuthTab('signup', this)">Sign Up</button>
             </div>
 
             <!-- LOGIN FORM -->
-            <form id="loginForm" onsubmit="handleLogin(event)">
+            <form id="loginForm" onsubmit="return false;" novalidate>
                 <div class="form-group">
                     <label>Email</label>
                     <input type="email" id="loginEmail" placeholder="your@email.com" required>
                 </div>
                 <div class="form-group">
                     <label>Password</label>
-                    <input type="password" id="loginPassword" placeholder="********" required>
+                    <div class="password-field">
+                        <input type="password" id="loginPassword" placeholder="********" required>
+                        <button type="button" class="password-toggle" onclick="togglePasswordVisibility('loginPassword', this)">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="captcha-box">
-                    <div class="captcha-label">Slide and verify to login</div>
-                    <div class="captcha-target"><i class="fas fa-sliders-h"></i> Target: <span id="loginCaptchaTarget">0</span></div>
-                    <input type="range" min="0" max="100" value="0" id="loginCaptchaSlider" class="captcha-slider">
-                    <div class="otp-row" style="margin-top: 10px;">
-                        <button type="button" class="btn btn-outline" style="flex: 1;" onclick="verifySliderCaptcha('login')">Verify Captcha</button>
-                        <button type="button" class="btn btn-secondary" style="padding: 10px 14px;" onclick="resetSliderCaptcha('login')"><i class="fas fa-rotate"></i></button>
+                    <div class="captcha-label">Slide to verify</div>
+                    <div class="otp-row" style="align-items:center;">
+                        <input type="range" min="0" max="100" value="0" id="loginSliderCaptcha" style="flex:1;">
+                        <span id="loginSliderText" style="font-size: 12px; font-weight: 700; color: var(--gray-600); min-width: 64px;">Slide</span>
                     </div>
                     <div id="loginCaptchaStatus" class="captcha-status">Not verified yet.</div>
                 </div>
@@ -2093,23 +2118,23 @@
                     <div class="captcha-label" style="margin-bottom: 8px;">Security OTP required after 3 captcha failures</div>
                     <div class="otp-row">
                         <input type="text" id="loginOtpCode" placeholder="Enter 6-digit OTP" maxlength="6">
-                        <button type="button" class="btn btn-outline" onclick="sendAuthOtp('login')">Send OTP</button>
+                        <button type="button" class="btn btn-outline" onclick="return sendOTPClick(event, 'login')">Send OTP</button>
                     </div>
                 </div>
-                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 8px;">
+                <button type="button" class="btn btn-primary" style="width: 100%; margin-top: 8px;" onclick="handleLogin(event)">
                     <i class="fas fa-sign-in-alt"></i> Login
                 </button>
             </form>
 
             <!-- SIGNUP FORM -->
-            <form id="signupForm" class="hidden" onsubmit="handleSignup(event)">
+            <form id="signupForm" class="hidden" novalidate>
                 <div class="role-selector">
-                    <div class="role-option selected" onclick="selectRole('household')" data-role="household">
+                    <div class="role-option selected" onclick="selectRole('household', this)" data-role="household">
                         <i class="fas fa-home"></i>
                         <h4>Household</h4>
                         <p>Personal tracking</p>
                     </div>
-                    <div class="role-option" onclick="selectRole('business')" data-role="business">
+                    <div class="role-option" onclick="selectRole('business', this)" data-role="business">
                         <i class="fas fa-building"></i>
                         <h4>Business</h4>
                         <p>Enterprise solution</p>
@@ -2127,7 +2152,12 @@
                 </div>
                 <div class="form-group">
                     <label>Password</label>
-                    <input type="password" id="signupPassword" placeholder="********" required>
+                    <div class="password-field">
+                        <input type="password" id="signupPassword" placeholder="********" required>
+                        <button type="button" class="password-toggle" onclick="togglePasswordVisibility('signupPassword', this)">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
                 </div>
                 <div id="businessFields" class="hidden">
                     <div class="form-group">
@@ -2136,23 +2166,17 @@
                     </div>
                 </div>
                 <div class="captcha-box">
-                    <div class="captcha-label">Complete slider captcha before OTP</div>
-                    <div class="captcha-target"><i class="fas fa-shield-alt"></i> Target: <span id="signupCaptchaTarget">0</span></div>
-                    <input type="range" min="0" max="100" value="0" id="signupCaptchaSlider" class="captcha-slider">
-                    <div class="otp-row" style="margin-top: 10px;">
-                        <button type="button" class="btn btn-outline" style="flex: 1;" onclick="verifySliderCaptcha('signup')">Verify Captcha</button>
-                        <button type="button" class="btn btn-secondary" style="padding: 10px 14px;" onclick="resetSliderCaptcha('signup')"><i class="fas fa-rotate"></i></button>
+                    <div class="captcha-label">Type this text to verify</div>
+                    <div class="otp-row" style="align-items:center; margin-bottom: 8px;">
+                        <div id="signupTextCaptchaValue" class="text-captcha-code" style="flex:1;">ABCDE</div>
+                        <button type="button" class="btn btn-secondary" style="padding: 10px 14px;" onclick="refreshSignupTextCaptcha()">
+                            <i class="fas fa-rotate"></i>
+                        </button>
                     </div>
+                    <input type="text" id="signupTextCaptchaInput" placeholder="Enter captcha text">
                     <div id="signupCaptchaStatus" class="captcha-status">Not verified yet.</div>
                 </div>
-                <div id="signupOtpSection" class="otp-box hidden">
-                    <div class="captcha-label" style="margin-bottom: 8px;">Email OTP verification required for signup</div>
-                    <div class="otp-row">
-                        <input type="text" id="signupOtpCode" placeholder="Enter 6-digit OTP" maxlength="6">
-                        <button type="button" class="btn btn-outline" onclick="sendAuthOtp('signup')">Send OTP</button>
-                    </div>
-                </div>
-                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 8px;">
+                <button type="button" class="btn btn-primary" style="width: 100%; margin-top: 8px;" onclick="handleSignup(event)">
                     <i class="fas fa-user-plus"></i> Create Account
                 </button>
             </form>
@@ -2706,14 +2730,15 @@
         const RAZORPAY_KEY_ID = 'rzp_live_SMa9HPWJ6T8RM1';
         const PAYMENT_BACKEND_BASE_URL = 'http://127.0.0.1:8000';
         const AUTH_BACKEND_BASE_URL = PAYMENT_BACKEND_BASE_URL;
+        let activeBackendBaseUrl = (localStorage.getItem('ecotrackBackendUrl') || AUTH_BACKEND_BASE_URL || '').trim();
         const PAYMENT_PENDING_TIMEOUT_MS = 5 * 60 * 1000;
-        const CAPTCHA_TOLERANCE = 4;
-        let loginCaptchaTarget = 0;
-        let signupCaptchaTarget = 0;
         let loginCaptchaPassed = false;
         let signupCaptchaPassed = false;
         let loginCaptchaFailCount = 0;
         let loginOtpRequired = false;
+        let activeAuthTab = 'login';
+        let loginSliderVerified = false;
+        let signupTextCaptchaCode = '';
 
         const BIODEGRADABLE_KEYWORDS = [
             'banana', 'apple', 'orange', 'fruit', 'vegetable', 'leaf', 'plant', 'flower',
@@ -2836,8 +2861,126 @@
         }
 
         // ========== AUTH FUNCTIONS ==========
-        function randomCaptchaTarget() {
-            return Math.floor(Math.random() * 81) + 10;
+        function togglePasswordVisibility(inputId, btn) {
+            const input = document.getElementById(inputId);
+            if (!input) return;
+            const icon = btn ? btn.querySelector('i') : null;
+            const isPassword = input.type === 'password';
+            input.type = isPassword ? 'text' : 'password';
+            if (icon) {
+                icon.classList.toggle('fa-eye', !isPassword);
+                icon.classList.toggle('fa-eye-slash', isPassword);
+            }
+        }
+
+        function randomCaptchaText(length = 5) {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let out = '';
+            for (let i = 0; i < length; i += 1) {
+                out += chars[Math.floor(Math.random() * chars.length)];
+            }
+            return out;
+        }
+
+        function refreshSignupTextCaptcha() {
+            signupTextCaptchaCode = randomCaptchaText(5);
+            const codeEl = document.getElementById('signupTextCaptchaValue');
+            const inputEl = document.getElementById('signupTextCaptchaInput');
+            if (codeEl) codeEl.textContent = signupTextCaptchaCode;
+            if (inputEl) inputEl.value = '';
+            signupCaptchaPassed = false;
+            setCaptchaStatus('signup', 'Not verified yet.');
+        }
+
+        function verifySignupTextCaptcha() {
+            const input = (document.getElementById('signupTextCaptchaInput')?.value || '').trim().toUpperCase();
+            if (!input || input !== signupTextCaptchaCode) {
+                signupCaptchaPassed = false;
+                setCaptchaStatus('signup', 'Captcha mismatch. Try again.', 'error');
+                refreshSignupTextCaptcha();
+                return false;
+            }
+            signupCaptchaPassed = true;
+            setCaptchaStatus('signup', 'Captcha verified successfully.', 'success');
+            return true;
+        }
+
+        function handleSignupTextCaptchaInput() {
+            const inputEl = document.getElementById('signupTextCaptchaInput');
+            if (!inputEl) return;
+            const typed = (inputEl.value || '').trim().toUpperCase();
+            const expected = signupTextCaptchaCode || '';
+
+            if (!typed) {
+                signupCaptchaPassed = false;
+                setCaptchaStatus('signup', 'Not verified yet.');
+                return;
+            }
+
+            if (typed === expected) {
+                signupCaptchaPassed = true;
+                setCaptchaStatus('signup', 'Captcha verified successfully.', 'success');
+                return;
+            }
+
+            // Only auto-fail when user has entered full captcha length.
+            if (typed.length >= expected.length) {
+                signupCaptchaPassed = false;
+                setCaptchaStatus('signup', 'Wrong captcha. Refreshed. Type again.', 'error');
+                refreshSignupTextCaptcha();
+            } else {
+                signupCaptchaPassed = false;
+                setCaptchaStatus('signup', 'Keep typing captcha...', '');
+            }
+        }
+
+        function refreshSelectionCaptcha(mode) {
+            if (mode === 'login') {
+                loginCaptchaPassed = false;
+                loginSliderVerified = false;
+            } else {
+                signupCaptchaPassed = false;
+                refreshSignupTextCaptcha();
+            }
+            setCaptchaStatus(mode, 'Not verified yet.');
+            if (mode === 'login') resetSliderCaptchaUi(mode);
+        }
+
+        function resetSliderCaptchaUi(mode) {
+            const slider = document.getElementById(`${mode}SliderCaptcha`);
+            const text = document.getElementById(`${mode}SliderText`);
+            if (slider) slider.value = '0';
+            if (text) {
+                text.textContent = 'Slide';
+                text.style.color = 'var(--gray-600)';
+            }
+            if (mode === 'login') {
+                loginSliderVerified = false;
+            }
+        }
+
+        function initSliderCaptchaHandlers() {
+            ['login'].forEach(mode => {
+                const slider = document.getElementById(`${mode}SliderCaptcha`);
+                const text = document.getElementById(`${mode}SliderText`);
+                if (!slider || slider.dataset.bound === '1') return;
+                slider.addEventListener('input', function () {
+                    const done = Number(this.value) >= 100;
+                    if (mode === 'login') {
+                        loginSliderVerified = done;
+                        loginCaptchaPassed = done;
+                        if (done) {
+                            loginCaptchaFailCount = 0;
+                        }
+                    }
+                    if (text) {
+                        text.textContent = done ? 'Verified' : 'Slide';
+                        text.style.color = done ? 'var(--success)' : 'var(--gray-600)';
+                    }
+                    setCaptchaStatus(mode, done ? 'Captcha verified successfully.' : 'Not verified yet.', done ? 'success' : '');
+                });
+                slider.dataset.bound = '1';
+            });
         }
 
         function setCaptchaStatus(mode, message, type = '') {
@@ -2854,60 +2997,6 @@
             section.classList.toggle('hidden', !loginOtpRequired);
         }
 
-        function resetSliderCaptcha(mode) {
-            const target = randomCaptchaTarget();
-            if (mode === 'login') {
-                loginCaptchaTarget = target;
-                loginCaptchaPassed = false;
-            } else {
-                signupCaptchaTarget = target;
-                signupCaptchaPassed = false;
-            }
-            const targetEl = document.getElementById(`${mode}CaptchaTarget`);
-            const slider = document.getElementById(`${mode}CaptchaSlider`);
-            if (targetEl) targetEl.textContent = target;
-            if (slider) slider.value = '0';
-            setCaptchaStatus(mode, 'Not verified yet.');
-        }
-
-        function verifySliderCaptcha(mode) {
-            const slider = document.getElementById(`${mode}CaptchaSlider`);
-            if (!slider) return false;
-            const value = Number(slider.value || 0);
-            const target = mode === 'login' ? loginCaptchaTarget : signupCaptchaTarget;
-            const ok = Math.abs(value - target) <= CAPTCHA_TOLERANCE;
-
-            if (mode === 'login') {
-                if (ok) {
-                    loginCaptchaPassed = true;
-                    loginCaptchaFailCount = 0;
-                    setCaptchaStatus('login', 'Captcha verified successfully.', 'success');
-                } else {
-                    loginCaptchaPassed = false;
-                    loginCaptchaFailCount += 1;
-                    setCaptchaStatus('login', `Captcha failed (${loginCaptchaFailCount}/3). Try again.`, 'error');
-                    if (loginCaptchaFailCount >= 3) {
-                        loginOtpRequired = true;
-                        updateLoginOtpVisibility();
-                        showToast('Security mode enabled. OTP is now required for login.', 'info');
-                    }
-                    resetSliderCaptcha('login');
-                }
-            } else {
-                if (ok) {
-                    signupCaptchaPassed = true;
-                    setCaptchaStatus('signup', 'Captcha verified. You can request OTP now.', 'success');
-                    const otpSection = document.getElementById('signupOtpSection');
-                    if (otpSection) otpSection.classList.remove('hidden');
-                } else {
-                    signupCaptchaPassed = false;
-                    setCaptchaStatus('signup', 'Captcha mismatch. Slide closer to target.', 'error');
-                    resetSliderCaptcha('signup');
-                }
-            }
-            return ok;
-        }
-
         async function sendAuthOtp(mode) {
             const emailInputId = mode === 'signup' ? 'signupEmail' : 'loginEmail';
             const email = (document.getElementById(emailInputId)?.value || '').trim().toLowerCase();
@@ -2922,26 +3011,122 @@
             }
 
             try {
-                await authRequest('/auth/send-otp', { email, purpose: mode });
-                showToast(`OTP sent to ${email}`, 'success');
+                const { response, payload } = await requestBackendWithFallback(
+                    '/send-otp',
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, purpose: mode })
+                    },
+                    15000
+                );
+
+                if (!response.ok || (payload && payload.error)) {
+                    throw new Error((payload && (payload.error || payload.detail || payload.message)) || 'OTP failed');
+                }
+
+                showToast((payload && payload.message) ? payload.message : `OTP sent to ${email}`, 'success');
             } catch (error) {
                 showToast(error.message || 'Could not send OTP.', 'error');
             }
         }
 
+        async function sendOTP(mode = 'signup') {
+            await sendAuthOtp(mode);
+        }
+
+        function sendOTPClick(event, mode = 'signup') {
+            if (event && typeof event.preventDefault === 'function') event.preventDefault();
+            if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
+            sendOTP(mode);
+            return false;
+        }
+
+        function getBackendCandidates() {
+            const fromWindow = (window.ECOTRACK_BACKEND_URL || '').trim();
+            const fromStorage = (localStorage.getItem('ecotrackBackendUrl') || '').trim();
+            const seed = [
+                activeBackendBaseUrl,
+                fromWindow,
+                fromStorage,
+                AUTH_BACKEND_BASE_URL,
+                PAYMENT_BACKEND_BASE_URL,
+                'http://localhost:8000',
+                'http://127.0.0.1:8000'
+            ].filter(Boolean);
+            return [...new Set(seed)];
+        }
+
+        async function requestBackendWithFallback(path, options = {}, timeoutMs = 12000) {
+            const candidates = getBackendCandidates();
+            let lastError = null;
+
+            for (const base of candidates) {
+                try {
+                    const fullUrl = `${base}${path}`;
+                    const { response, payload } = await fetchJsonWithTimeout(fullUrl, options, timeoutMs);
+                    activeBackendBaseUrl = base;
+                    localStorage.setItem('ecotrackBackendUrl', base);
+                    return { response, payload, baseUrl: base };
+                } catch (error) {
+                    lastError = error;
+                }
+            }
+
+            if (lastError && lastError.name === 'AbortError') {
+                throw new Error('Backend timeout. Please ensure backend is running on port 8000.');
+            }
+            throw new Error('Backend not reachable. Start backend: uvicorn backend.app:app --reload --port 8000');
+        }
+
         function initAuthSecurityUi() {
-            resetSliderCaptcha('login');
-            resetSliderCaptcha('signup');
+            const signupForm = document.getElementById('signupForm');
+            if (signupForm && !signupForm.dataset.preventBound) {
+                signupForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    handleSignup(e);
+                });
+                signupForm.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleSignup(e);
+                    }
+                });
+                signupForm.dataset.preventBound = '1';
+            }
+            const loginForm = document.getElementById('loginForm');
+            if (loginForm && !loginForm.dataset.preventBound) {
+                loginForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    handleLogin(e);
+                });
+                loginForm.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleLogin(e);
+                    }
+                });
+                loginForm.dataset.preventBound = '1';
+            }
+
+            const signupCaptchaInput = document.getElementById('signupTextCaptchaInput');
+            if (signupCaptchaInput && !signupCaptchaInput.dataset.bound) {
+                signupCaptchaInput.addEventListener('input', handleSignupTextCaptchaInput);
+                signupCaptchaInput.dataset.bound = '1';
+            }
+
+            refreshSelectionCaptcha('login');
+            refreshSelectionCaptcha('signup');
+            initSliderCaptchaHandlers();
             loginCaptchaFailCount = 0;
             loginOtpRequired = false;
             loginCaptchaPassed = false;
             signupCaptchaPassed = false;
             updateLoginOtpVisibility();
-            const signupOtpSection = document.getElementById('signupOtpSection');
-            if (signupOtpSection) signupOtpSection.classList.add('hidden');
         }
 
         function switchAuthTab(tab, clickedTab) {
+            activeAuthTab = tab;
             const tabs = document.querySelectorAll('.auth-tab');
             tabs.forEach(t => t.classList.remove('active'));
             clickedTab.classList.add('active');
@@ -2952,20 +3137,18 @@
             if (tab === 'login') {
                 loginForm.classList.remove('hidden');
                 signupForm.classList.add('hidden');
-                resetSliderCaptcha('login');
+                refreshSelectionCaptcha('login');
             } else {
                 loginForm.classList.add('hidden');
                 signupForm.classList.remove('hidden');
-                resetSliderCaptcha('signup');
-                const otpSection = document.getElementById('signupOtpSection');
-                if (otpSection && !signupCaptchaPassed) otpSection.classList.add('hidden');
+                refreshSelectionCaptcha('signup');
             }
         }
 
-        function selectRole(role) {
+        function selectRole(role, clickedEl) {
             const options = document.querySelectorAll('.role-option');
             options.forEach(opt => opt.classList.remove('selected'));
-            event.currentTarget.classList.add('selected');
+            if (clickedEl) clickedEl.classList.add('selected');
             document.getElementById('signupRole').value = role;
             
             const businessFields = document.getElementById('businessFields');
@@ -2977,12 +3160,15 @@
         }
 
         async function authRequest(path, payload) {
-            const response = await fetch(`${AUTH_BACKEND_BASE_URL}${path}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            const data = await response.json().catch(() => ({}));
+            const { response, payload: data } = await requestBackendWithFallback(
+                path,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                },
+                15000
+            );
             if (!response.ok) {
                 throw new Error(data.detail || data.message || 'Request failed.');
             }
@@ -2990,28 +3176,57 @@
         }
 
         async function handleLogin(event) {
-            event.preventDefault();
+            if (event && typeof event.preventDefault === 'function') event.preventDefault();
             const email = document.getElementById('loginEmail').value.trim().toLowerCase();
             const password = document.getElementById('loginPassword').value;
             const otpCode = (document.getElementById('loginOtpCode')?.value || '').trim();
 
             if (!loginCaptchaPassed) {
-                const passed = verifySliderCaptcha('login');
-                if (!passed) return;
+                loginCaptchaFailCount += 1;
+                if (loginCaptchaFailCount >= 3) {
+                    loginOtpRequired = true;
+                    updateLoginOtpVisibility();
+                }
+                showToast('Complete slider captcha first.', 'error');
+                return;
             }
 
             if (loginOtpRequired && (otpCode.length !== 6 || !/^\d{6}$/.test(otpCode))) {
                 showToast('Enter 6-digit OTP for secure login.', 'error');
                 return;
             }
+            if (!loginSliderVerified) {
+                showToast('Complete slider captcha.', 'error');
+                return;
+            }
 
             try {
-                const result = await authRequest('/auth/login', {
-                    email,
-                    password,
-                    require_otp: loginOtpRequired,
-                    otp_code: loginOtpRequired ? otpCode : ''
-                });
+                const { response, payload: result } = await requestBackendWithFallback(
+                    '/login',
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            email,
+                            password,
+                            captcha_passed: loginCaptchaPassed,
+                            require_otp: loginOtpRequired,
+                            otp: loginOtpRequired ? otpCode : ''
+                        })
+                    },
+                    15000
+                );
+                if (!response.ok) {
+                    throw new Error((result && (result.error || result.detail || result.message)) || 'Login failed.');
+                }
+                if (!result || result.success === false) {
+                    if (result && result.require_otp) {
+                        loginOtpRequired = true;
+                        updateLoginOtpVisibility();
+                        throw new Error('OTP required after captcha failures.');
+                    }
+                    throw new Error((result && (result.message || result.error)) || 'Invalid details.');
+                }
                 let user = ensureUserDefaults(result.user || {});
                 user = ensureUserDefaults(user);
                 user.lastLoginAt = new Date().toISOString();
@@ -3024,47 +3239,45 @@
                 const loginOtpInput = document.getElementById('loginOtpCode');
                 if (loginOtpInput) loginOtpInput.value = '';
                 updateLoginOtpVisibility();
-                resetSliderCaptcha('login');
+                refreshSelectionCaptcha('login');
                 showMainApp();
                 showToast('Welcome back!', 'success');
             } catch (error) {
                 loginCaptchaPassed = false;
-                resetSliderCaptcha('login');
-                showToast(error.message || 'Invalid email or password.', 'error');
+                refreshSelectionCaptcha('login');
+                if ((error.message || '').toLowerCase().includes('otp')) {
+                    loginOtpRequired = true;
+                    updateLoginOtpVisibility();
+                }
+                showToast(error.message || 'Login failed.', 'error');
             }
         }
 
         async function handleSignup(event) {
-            event.preventDefault();
+            if (event && typeof event.preventDefault === 'function') event.preventDefault();
             const name = document.getElementById('signupName').value.trim();
             const email = document.getElementById('signupEmail').value.trim().toLowerCase();
             const password = document.getElementById('signupPassword').value;
             const role = document.getElementById('signupRole').value;
             const company = document.getElementById('companyName').value.trim();
-            const otpCode = (document.getElementById('signupOtpCode')?.value || '').trim();
 
-            if (!signupCaptchaPassed) {
-                const passed = verifySliderCaptcha('signup');
-                if (!passed) return;
-            }
-            if (otpCode.length !== 6 || !/^\d{6}$/.test(otpCode)) {
-                showToast('Enter 6-digit OTP sent to your email.', 'error');
+            if (!verifySignupTextCaptcha()) {
+                showToast('Complete text captcha first.', 'error');
                 return;
             }
 
             try {
-                const result = await authRequest('/auth/signup', { name, email, password, role, company, otp_code: otpCode });
+                const result = await authRequest('/auth/signup', { name, email, password, role, company });
                 const user = ensureUserDefaults(result.user || {});
                 currentUser = user;
                 upsertCurrentUser(user);
                 localStorage.setItem('ecotrackUser', JSON.stringify(user));
-                const signupOtpInput = document.getElementById('signupOtpCode');
-                if (signupOtpInput) signupOtpInput.value = '';
                 signupCaptchaPassed = false;
-                resetSliderCaptcha('signup');
+                refreshSelectionCaptcha('signup');
                 showMainApp();
                 showToast('Account created successfully!', 'success');
             } catch (error) {
+                refreshSelectionCaptcha('signup');
                 showToast(error.message || 'Could not create account.', 'error');
             }
         }
@@ -3079,6 +3292,9 @@
             document.getElementById('authPage').classList.remove('hidden');
             document.getElementById('mainNav').classList.add('hidden');
             hideAllPages();
+            const tabs = document.querySelectorAll('.auth-tab');
+            const targetBtn = tabs[activeAuthTab === 'signup' ? 1 : 0];
+            if (targetBtn) switchAuthTab(activeAuthTab, targetBtn);
         }
 
         function showMainApp() {
@@ -5176,14 +5392,10 @@
             try {
                 const payload = { ...user };
                 delete payload.password;
-                await fetch(`${AUTH_BACKEND_BASE_URL}/auth/save-user`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        id: user.id,
-                        email: user.email,
-                        data: payload
-                    })
+                await authRequest('/auth/save-user', {
+                    id: user.id,
+                    email: user.email,
+                    data: payload
                 });
             } catch (error) {
                 // Keep app functional even if backend sync is temporarily unavailable.
@@ -5389,19 +5601,20 @@
         }
 
         async function createOrderWithRetry(amountInRupees) {
-            const createOrderUrl = `${PAYMENT_BACKEND_BASE_URL}/create-order`;
-            const warmupUrl = `${PAYMENT_BACKEND_BASE_URL}/`;
             let lastError = null;
 
             for (let attempt = 1; attempt <= 3; attempt += 1) {
                 try {
                     if (attempt === 1) {
                         // Warm up sleeping backend without blocking flow if this call fails.
-                        fetch(warmupUrl, { method: 'GET', cache: 'no-store' }).catch(() => {});
+                        const warmups = getBackendCandidates().slice(0, 2).map(base =>
+                            fetch(`${base}/`, { method: 'GET', cache: 'no-store' }).catch(() => {})
+                        );
+                        Promise.allSettled(warmups).catch(() => {});
                     }
 
-                    const { response, payload } = await fetchJsonWithTimeout(
-                        createOrderUrl,
+                    const { response, payload } = await requestBackendWithFallback(
+                        '/create-order',
                         {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -5520,12 +5733,15 @@
                     theme: { color: '#2D5A27' },
                     handler: async function(response) {
                         try {
-                            const verifyRes = await fetch(`${PAYMENT_BACKEND_BASE_URL}/verify-payment`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify(response)
-                            });
-                            const verifyData = await verifyRes.json();
+                            const { response: verifyRes, payload: verifyData } = await requestBackendWithFallback(
+                                '/verify-payment',
+                                {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(response)
+                                },
+                                15000
+                            );
                             if (!verifyRes.ok || !verifyData || !verifyData.success) {
                                 throw new Error('Payment verification failed.');
                             }

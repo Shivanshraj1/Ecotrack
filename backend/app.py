@@ -11,10 +11,13 @@ from datetime import datetime, timezone, timedelta
 from email.message import EmailMessage
 
 from fastapi import FastAPI, File, UploadFile, Request, HTTPException
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-load_dotenv()
+BASE_DIR = os.path.dirname(__file__)
+DOTENV_PATH = os.path.join(BASE_DIR, ".env")
+load_dotenv(dotenv_path=DOTENV_PATH)
 
 app = FastAPI()
 
@@ -26,9 +29,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "ecotrack.db")
+DB_PATH = os.path.join(BASE_DIR, "ecotrack.db")
 AUTH_SALT = os.getenv("AUTH_SALT", "ecotrack-auth-salt")
 OTP_TTL_MINUTES = int(os.getenv("OTP_TTL_MINUTES", "10"))
+LOGIN_CAPTCHA_MAX_FAILS = int(os.getenv("LOGIN_CAPTCHA_MAX_FAILS", "3"))
+login_attempts = {}
 
 
 class SignupRequest(BaseModel):
@@ -37,12 +42,12 @@ class SignupRequest(BaseModel):
     password: str
     role: str = "household"
     company: str = ""
-    otp_code: str = ""
 
 
 class LoginRequest(BaseModel):
     email: str
     password: str
+    captcha_passed: bool = True
     require_otp: bool = False
     otp_code: str = ""
 
@@ -164,10 +169,18 @@ def send_otp_email(to_email: str, otp_code: str, purpose: str) -> None:
     smtp_password = os.getenv("SMTP_PASSWORD", "").strip()
     smtp_from = os.getenv("SMTP_FROM", smtp_user).strip()
 
+    # Gmail quick setup support
+    if (not smtp_user or not smtp_password) and os.getenv("EMAIL_USER") and os.getenv("EMAIL_PASS"):
+        smtp_host = "smtp.gmail.com"
+        smtp_port = 587
+        smtp_user = os.getenv("EMAIL_USER", "").strip()
+        smtp_password = os.getenv("EMAIL_PASS", "").strip()
+        smtp_from = smtp_user
+
     if not smtp_host or not smtp_user or not smtp_password or not smtp_from:
         raise HTTPException(
             status_code=500,
-            detail="OTP email is not configured on server. Set SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, SMTP_FROM.",
+            detail="OTP email is not configured. Set EMAIL_USER/EMAIL_PASS (Gmail app password) or SMTP_HOST/SMTP_USERNAME/SMTP_PASSWORD/SMTP_FROM.",
         )
 
     purpose_label = "Sign Up" if purpose == "signup" else "Login Security"
@@ -182,9 +195,20 @@ def send_otp_email(to_email: str, otp_code: str, purpose: str) -> None:
     )
 
     with smtplib.SMTP(smtp_host, smtp_port, timeout=15) as server:
-        server.starttls()
-        server.login(smtp_user, smtp_password)
-        server.send_message(msg)
+        try:
+            server.starttls()
+            server.login(smtp_user, smtp_password)
+            server.send_message(msg)
+        except smtplib.SMTPAuthenticationError as exc:
+            raise HTTPException(
+                status_code=500,
+                detail="Email authentication failed. Check EMAIL_USER and Gmail App Password (EMAIL_PASS).",
+            ) from exc
+        except smtplib.SMTPException as exc:
+            raise HTTPException(
+                status_code=500,
+                detail=f"SMTP send failed: {str(exc)}",
+            ) from exc
 
 
 def create_and_store_otp(conn: sqlite3.Connection, email: str, purpose: str) -> str:
@@ -252,6 +276,14 @@ def verify_stored_otp(conn: sqlite3.Connection, email: str, purpose: str, otp_co
 @app.on_event("startup")
 def on_startup() -> None:
     init_db()
+    email_user = os.getenv("EMAIL_USER", "").strip()
+    email_pass = os.getenv("EMAIL_PASS", "").strip()
+    smtp_user = os.getenv("SMTP_USERNAME", "").strip()
+    smtp_pass = os.getenv("SMTP_PASSWORD", "").strip()
+    has_gmail = bool(email_user and email_pass)
+    has_smtp = bool(smtp_user and smtp_pass)
+    print(f"EcoTrack startup: .env loaded from {DOTENV_PATH}")
+    print(f"EcoTrack startup: EMAIL config ready={has_gmail}, SMTP config ready={has_smtp}")
 
 
 # Razorpay client
@@ -279,15 +311,47 @@ def auth_send_otp(payload: OtpSendRequest):
             existing = conn.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()
             if existing:
                 raise HTTPException(status_code=409, detail="This email is already registered. Please login.")
-        else:
-            existing = conn.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()
-            if not existing:
-                raise HTTPException(status_code=404, detail="No account found with this email.")
 
         otp_code = create_and_store_otp(conn, email, purpose)
 
     send_otp_email(email, otp_code, purpose)
     return {"success": True, "message": "OTP sent successfully."}
+
+
+@app.post("/send-otp")
+async def send_otp_compat(request: Request):
+    try:
+        body = await request.json()
+        email = normalize_email(body.get("email"))
+        purpose = (body.get("purpose") or "signup").strip().lower()
+
+        if not email:
+            return {"error": "Email required"}
+
+        print("Sending OTP to:", email)
+        print("EMAIL_USER:", os.getenv("EMAIL_USER"))
+
+        if purpose not in {"signup", "login"}:
+            return {"error": "Invalid OTP purpose"}
+
+        with get_conn() as conn:
+            if purpose == "signup":
+                existing = conn.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()
+                if existing:
+                    return JSONResponse(status_code=409, content={"error": "This email is already registered. Please login."})
+
+            otp_code = create_and_store_otp(conn, email, purpose)
+
+        send_otp_email(email, otp_code, purpose)
+        print("OTP SENT:", otp_code)
+        return {"message": "OTP sent", "success": True}
+
+    except HTTPException as exc:
+        print("OTP ERROR:", str(exc.detail))
+        return JSONResponse(status_code=exc.status_code, content={"error": str(exc.detail)})
+    except Exception as exc:
+        print("OTP ERROR:", str(exc))
+        return JSONResponse(status_code=500, content={"error": str(exc)})
 
 
 @app.post("/auth/verify-otp")
@@ -307,6 +371,15 @@ def auth_verify_otp(payload: OtpVerifyRequest):
     return {"success": True, "message": "OTP verified."}
 
 
+@app.post("/verify-otp")
+async def verify_otp_compat(request: Request):
+    body = await request.json()
+    email = normalize_email(body.get("email"))
+    purpose = (body.get("purpose") or "signup").strip().lower()
+    otp_code = (body.get("otp") or body.get("otp_code") or "").strip()
+    return auth_verify_otp(OtpVerifyRequest(email=email, purpose=purpose, otp_code=otp_code))
+
+
 @app.post("/auth/signup")
 def auth_signup(payload: SignupRequest):
     email = normalize_email(payload.email)
@@ -321,18 +394,14 @@ def auth_signup(payload: SignupRequest):
         raise HTTPException(status_code=400, detail="Email is required.")
     if len(password) < 6:
         raise HTTPException(status_code=400, detail="Password must be at least 6 characters.")
-    if len((payload.otp_code or "").strip()) != 6:
-        raise HTTPException(status_code=400, detail="OTP is required for signup.")
 
     if role not in {"household", "business"}:
         role = "household"
 
     created_at = utc_now_iso()
     password_hash = hash_password(password)
-    otp_code = (payload.otp_code or "").strip()
 
     with get_conn() as conn:
-        verify_stored_otp(conn, email, "signup", otp_code, consume=True)
         existing = conn.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()
         if existing:
             raise HTTPException(status_code=409, detail="This email is already registered. Please login.")
@@ -361,8 +430,19 @@ def auth_login(payload: LoginRequest):
     email = normalize_email(payload.email)
     password = payload.password or ""
     password_hash = hash_password(password)
+    captcha_passed = bool(payload.captcha_passed)
     require_otp = bool(payload.require_otp)
     otp_code = (payload.otp_code or "").strip()
+
+    if not captcha_passed:
+        count = int(login_attempts.get(email, 0)) + 1
+        login_attempts[email] = count
+        return {
+            "success": False,
+            "require_otp": count >= LOGIN_CAPTCHA_MAX_FAILS,
+            "attempts": count,
+            "message": "Captcha not passed."
+        }
 
     with get_conn() as conn:
         row = conn.execute(
@@ -400,7 +480,21 @@ def auth_login(payload: LoginRequest):
         )
         conn.commit()
 
+    login_attempts[email] = 0
     return {"success": True, "user": user_data}
+
+
+@app.post("/login")
+async def login_compat(request: Request):
+    body = await request.json()
+    payload = LoginRequest(
+        email=body.get("email", ""),
+        password=body.get("password", ""),
+        captcha_passed=bool(body.get("captcha_passed", True)),
+        require_otp=bool(body.get("require_otp", False)),
+        otp_code=(body.get("otp") or body.get("otp_code") or "")
+    )
+    return auth_login(payload)
 
 
 @app.post("/auth/save-user")
