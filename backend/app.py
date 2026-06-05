@@ -87,7 +87,7 @@ def hash_otp(email: str, purpose: str, otp_code: str) -> str:
 
 
 def get_conn() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=30)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -286,10 +286,15 @@ def on_startup() -> None:
     print(f"EcoTrack startup: EMAIL config ready={has_gmail}, SMTP config ready={has_smtp}")
 
 
-# Razorpay client
-razorpay_client = razorpay.Client(
-    auth=(os.getenv("RAZORPAY_KEY_ID"), os.getenv("RAZORPAY_KEY_SECRET"))
-)
+def get_razorpay_client() -> razorpay.Client:
+    key_id = os.getenv("RAZORPAY_KEY_ID", "").strip()
+    key_secret = os.getenv("RAZORPAY_KEY_SECRET", "").strip()
+    if not key_id or not key_secret:
+        raise HTTPException(
+            status_code=503,
+            detail="Payment gateway is not configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET.",
+        )
+    return razorpay.Client(auth=(key_id, key_secret))
 
 
 @app.get("/")
@@ -556,12 +561,21 @@ async def predict(file: UploadFile = File(...)):
 async def create_order(request: Request):
     body = await request.json()
     amount = body.get("amount")
+    try:
+        amount = int(amount)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="Amount must be a valid number.")
+    if amount <= 0:
+        raise HTTPException(status_code=400, detail="Amount must be greater than zero.")
 
-    order = razorpay_client.order.create({
-        "amount": amount * 100,
-        "currency": "INR",
-        "receipt": f"receipt_{amount}"
-    })
+    try:
+        order = get_razorpay_client().order.create({
+            "amount": amount * 100,
+            "currency": "INR",
+            "receipt": f"receipt_{amount}_{int(datetime.now(timezone.utc).timestamp())}"
+        })
+    except razorpay.errors.RazorpayError as exc:
+        raise HTTPException(status_code=502, detail=f"Payment gateway error: {str(exc)}") from exc
 
     return order
 
@@ -573,11 +587,20 @@ async def verify_payment(request: Request):
     razorpay_order_id = body.get("razorpay_order_id")
     razorpay_payment_id = body.get("razorpay_payment_id")
     razorpay_signature = body.get("razorpay_signature")
+    key_secret = os.getenv("RAZORPAY_KEY_SECRET", "").strip()
+
+    if not key_secret:
+        raise HTTPException(
+            status_code=503,
+            detail="Payment gateway is not configured. Set RAZORPAY_KEY_SECRET.",
+        )
+    if not razorpay_order_id or not razorpay_payment_id or not razorpay_signature:
+        raise HTTPException(status_code=400, detail="Missing payment verification fields.")
 
     generated_signature = hmac.new(
-        os.getenv("RAZORPAY_KEY_SECRET").encode(),
+        key_secret.encode(),
         f"{razorpay_order_id}|{razorpay_payment_id}".encode(),
         hashlib.sha256
     ).hexdigest()
 
-    return {"success": generated_signature == razorpay_signature}
+    return {"success": hmac.compare_digest(generated_signature, razorpay_signature)}

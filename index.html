@@ -2734,6 +2734,7 @@
         const AUTH_REQUEST_TIMEOUT_MS = 90000;
         const OTP_REQUEST_TIMEOUT_MS = 90000;
         const BACKEND_WARMUP_TIMEOUT_MS = 90000;
+        const PAYMENT_REQUEST_TIMEOUT_MS = 90000;
         let activeBackendBaseUrl = (localStorage.getItem('ecotrackBackendUrl') || AUTH_BACKEND_BASE_URL || '').trim();
         if (/localhost|127\.0\.0\.1/i.test(activeBackendBaseUrl)) {
             activeBackendBaseUrl = DEFAULT_BACKEND_BASE_URL;
@@ -3233,7 +3234,7 @@
                             otp: loginOtpRequired ? otpCode : ''
                         })
                     },
-                    15000
+                    AUTH_REQUEST_TIMEOUT_MS
                 );
                 if (!response.ok) {
                     throw new Error((result && (result.error || result.detail || result.message)) || 'Login failed.');
@@ -3879,6 +3880,11 @@
             const overlay = document.getElementById('detectionOverlay');
             const autoDetectLabel = document.getElementById('autoDetectLabel');
             if (!cameraVideo || !overlay || !cameraVideo.srcObject || cameraVideo.readyState < 2) return;
+            if (!objectDetectorModel) {
+                if (autoDetectLabel) autoDetectLabel.textContent = 'AI model loading...';
+                ensureModelsLoaded().catch(() => {});
+                return;
+            }
 
             autoDetectBusy = true;
             try {
@@ -5639,7 +5645,7 @@
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ amount: amountInRupees })
                         },
-                        15000
+                        PAYMENT_REQUEST_TIMEOUT_MS
                     );
 
                     if (!response.ok || !payload || !payload.id || !payload.amount) {
@@ -5759,7 +5765,7 @@
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify(response)
                                 },
-                                15000
+                                PAYMENT_REQUEST_TIMEOUT_MS
                             );
                             if (!verifyRes.ok || !verifyData || !verifyData.success) {
                                 throw new Error('Payment verification failed.');
