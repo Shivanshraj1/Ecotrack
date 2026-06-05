@@ -447,7 +447,7 @@ MIT License - See [LICENSE](LICENSE) file for details
 
 ## 📞 Contact & Support
 
-- **Website**: https://ecotrack.app (coming soon)
+- **Website**: https://ecotrack-two.vercel.app/#
 - **Email**: support@ecotrack.app
 - **Twitter**: [@EcoTrackApp](https://twitter.com/ecotrackapp)
 - **GitHub Issues**: [Report bugs](https://github.com/yourusername/ecotrack/issues)
