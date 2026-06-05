@@ -6,6 +6,8 @@
 
 **EcoTrack** is a comprehensive AI-driven waste management platform designed to revolutionize how households and businesses handle waste. Built with modern web technologies, it provides intelligent waste classification, gamified rewards, and enterprise-grade analytics.
 
+**LIVE**: https://ecotrack-two.vercel.app/#
+
 ---
 
 ## 🎯 Project Overview
@@ -448,9 +450,7 @@ MIT License - See [LICENSE](LICENSE) file for details
 ## 📞 Contact & Support
 
 - **Website**: https://ecotrack-two.vercel.app/#
-- **Email**: support@ecotrack.app
-- **Twitter**: [@EcoTrackApp](https://twitter.com/ecotrackapp)
-- **GitHub Issues**: [Report bugs](https://github.com/yourusername/ecotrack/issues)
+- **CS**: In Web Section
 
 ---
 
@@ -495,18 +495,3 @@ If you find EcoTrack useful, please ⭐ star this repository!
 
 ---
 
-## 📈 Project Roadmap
-
-```
-Q1 2024: ✅ MVP Launch (Current Version)
-Q2 2024: 🔄 Real AI Model Integration
-Q3 2024: 🔄 Backend API & Mobile Apps
-Q4 2024: 🔄 Enterprise Features & IoT
-Q1 2025: 🔄 International Expansion
-```
-
----
-
-*Last Updated: 2024-01-15*
-*Version: 1.0.0*
-*Build: Production*
