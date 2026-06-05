@@ -2731,6 +2731,9 @@
         const DEFAULT_BACKEND_BASE_URL = 'https://ecotrack-1-116g.onrender.com';
         const PAYMENT_BACKEND_BASE_URL = DEFAULT_BACKEND_BASE_URL;
         const AUTH_BACKEND_BASE_URL = PAYMENT_BACKEND_BASE_URL;
+        const AUTH_REQUEST_TIMEOUT_MS = 90000;
+        const OTP_REQUEST_TIMEOUT_MS = 90000;
+        const BACKEND_WARMUP_TIMEOUT_MS = 90000;
         let activeBackendBaseUrl = (localStorage.getItem('ecotrackBackendUrl') || AUTH_BACKEND_BASE_URL || '').trim();
         if (/localhost|127\.0\.0\.1/i.test(activeBackendBaseUrl)) {
             activeBackendBaseUrl = DEFAULT_BACKEND_BASE_URL;
@@ -2844,6 +2847,7 @@
             initRewardDeliveryLiveUpdates();
             initMobileMenu();
             initManualLocationAssist();
+            warmBackend();
             startPaymentStatusTimer();
             initAuthSecurityUi();
         }
@@ -3023,7 +3027,7 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ email, purpose: mode })
                     },
-                    15000
+                    OTP_REQUEST_TIMEOUT_MS
                 );
 
                 if (!response.ok || (payload && payload.error)) {
@@ -3065,6 +3069,13 @@
             return [...new Set(seed)];
         }
 
+        function warmBackend() {
+            const warmups = getBackendCandidates().slice(0, 2).map(base =>
+                fetchJsonWithTimeout(`${base}/`, { method: 'GET' }, BACKEND_WARMUP_TIMEOUT_MS).catch(() => null)
+            );
+            Promise.allSettled(warmups).catch(() => {});
+        }
+
         async function requestBackendWithFallback(path, options = {}, timeoutMs = 12000) {
             const candidates = getBackendCandidates();
             let lastError = null;
@@ -3082,7 +3093,7 @@
             }
 
             if (lastError && lastError.name === 'AbortError') {
-                throw new Error('Backend timeout. Please try again in a few seconds.');
+                throw new Error('Backend is waking up. Please try again in about a minute.');
             }
             throw new Error('Backend not reachable. Please check internet or backend deployment status.');
         }
@@ -3175,7 +3186,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 },
-                15000
+                AUTH_REQUEST_TIMEOUT_MS
             );
             if (!response.ok) {
                 throw new Error(data.detail || data.message || 'Request failed.');
