@@ -535,24 +535,38 @@ def auth_save_user(payload: SaveUserRequest):
 
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
-    label = random.choice(["Biodegradable", "Non-Biodegradable"])
+    filename = (file.filename or "").lower()
+    bio_terms = (
+        "banana", "apple", "orange", "fruit", "vegetable", "leaf", "leaves",
+        "food", "rice", "bread", "peel", "compost", "paper", "cardboard",
+        "carton", "wood", "flower", "garden", "tea", "coffee"
+    )
+    non_bio_terms = (
+        "plastic", "bottle", "can", "metal", "aluminum", "steel", "glass",
+        "phone", "laptop", "keyboard", "screen", "battery", "wrapper",
+        "packet", "pouch", "polythene", "rubber", "shoe", "bag", "wire",
+        "charger", "thermocol", "styrofoam"
+    )
+    bio_score = sum(1 for term in bio_terms if term in filename)
+    non_bio_score = sum(1 for term in non_bio_terms if term in filename)
+    label = "Biodegradable" if bio_score > non_bio_score else "Non-Biodegradable"
 
     if label == "Biodegradable":
         details = {
             "recommended_bin": "Green",
-            "eco_points": 10,
+            "eco_points": 15,
             "description": "Organic waste suitable for composting."
         }
     else:
         details = {
-            "recommended_bin": "Blue",
-            "eco_points": 5,
-            "description": "Plastic or metal waste."
+            "recommended_bin": "Red",
+            "eco_points": 10,
+            "description": "Dry waste suitable for recycling or safe disposal."
         }
 
     return {
         "label": label,
-        "confidence": 92.5,
+        "confidence": 88 if bio_score or non_bio_score else 64,
         "details": details
     }
 

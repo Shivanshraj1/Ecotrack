@@ -2722,7 +2722,7 @@
         let paymentStatusTimer = null;
         let paymentCountdownTimer = null;
         let paymentCheckoutBusy = false;
-        const MIN_RULE_CONFIDENCE = 0.38;
+        const MIN_RULE_CONFIDENCE = 0.32;
         const MIN_DETECTION_SCORE = 0.45;
         const MIN_CLASSIFICATION_CONFIDENCE = 62;
         const TARGET_OVERLAP_THRESHOLD = 0.45;
@@ -2751,33 +2751,47 @@
 
         const BIODEGRADABLE_KEYWORDS = [
             'banana', 'apple', 'orange', 'fruit', 'vegetable', 'leaf', 'plant', 'flower',
-            'food', 'bread', 'pizza', 'burger', 'rice', 'egg', 'peel', 'compost', 'wood', 'paper'
+            'food', 'bread', 'pizza', 'burger', 'rice', 'egg', 'peel', 'compost', 'wood', 'paper',
+            'organic', 'wet waste', 'kitchen waste', 'leftover', 'tea', 'coffee', 'shell', 'grass',
+            'garden', 'tissue', 'napkin', 'cardboard', 'carton', 'newspaper'
         ];
 
         const NON_BIODEGRADABLE_KEYWORDS = [
             'plastic', 'bottle', 'can', 'tin', 'metal', 'aluminum', 'steel', 'glass',
             'phone', 'laptop', 'keyboard', 'screen', 'electronic', 'battery', 'pack',
-            'wrapper', 'polythene', 'nylon', 'rubber', 'shoe', 'sneaker', 'bag', 'drum', 'barrel', 'bucket'
+            'wrapper', 'polythene', 'nylon', 'rubber', 'shoe', 'sneaker', 'bag', 'drum', 'barrel', 'bucket',
+            'packet', 'pouch', 'foil', 'chip bag', 'snack packet', 'styrofoam', 'thermocol', 'ceramic',
+            'wire', 'charger', 'cable', 'mouse', 'remote', 'bulb', 'tube light', 'medicine', 'mask',
+            'diaper', 'sanitary', 'syringe'
         ];
 
         const ITEM_RULES = [
+            { name: 'Banana Peel', type: 'Biodegradable', reusable: false, keywords: ['banana peel', 'banana', 'peel'] },
+            { name: 'Apple Core', type: 'Biodegradable', reusable: false, keywords: ['apple core', 'apple', 'fruit'] },
+            { name: 'Orange Peel', type: 'Biodegradable', reusable: false, keywords: ['orange peel', 'orange', 'citrus', 'peel'] },
+            { name: 'Tea/Coffee Waste', type: 'Biodegradable', reusable: false, keywords: ['tea leaves', 'tea bag', 'coffee grounds', 'coffee', 'tea'] },
             { name: 'Drum Barrel', type: 'Non-Biodegradable', reusable: true, keywords: ['drum', 'barrel', 'tank'] },
             { name: 'Bucket', type: 'Non-Biodegradable', reusable: true, keywords: ['bucket', 'pail'] },
             { name: 'Steel Bottle', type: 'Non-Biodegradable', reusable: true, keywords: ['steel bottle', 'stainless bottle', 'metal bottle', 'thermo steel bottle', 'thermos', 'vacuum bottle', 'insulated bottle', 'flask', 'water bottle'] },
             { name: 'Plastic Bottle', type: 'Non-Biodegradable', reusable: true, keywords: ['plastic bottle', 'pet bottle', 'disposable bottle'] },
             { name: 'Glass Bottle', type: 'Non-Biodegradable', reusable: true, keywords: ['wine bottle', 'glass bottle', 'jar', 'glass'] },
             { name: 'Aluminum Can', type: 'Non-Biodegradable', reusable: false, keywords: ['can', 'tin can', 'soda can', 'beer can'] },
+            { name: 'Food Wrapper', type: 'Non-Biodegradable', reusable: false, keywords: ['wrapper', 'packet', 'pouch', 'chip bag', 'snack packet', 'foil wrapper'] },
+            { name: 'Thermocol/Styrofoam', type: 'Non-Biodegradable', reusable: false, keywords: ['thermocol', 'styrofoam', 'foam box', 'foam cup'] },
             { name: 'Cardboard Box', type: 'Biodegradable', reusable: true, keywords: ['carton', 'cardboard', 'box', 'package'] },
-            { name: 'Paper Cup', type: 'Biodegradable', reusable: false, keywords: ['paper cup', 'cup'] },
+            { name: 'Paper Waste', type: 'Biodegradable', reusable: false, keywords: ['paper', 'newspaper', 'notebook', 'book', 'tissue', 'napkin'] },
+            { name: 'Paper Cup', type: 'Biodegradable', reusable: false, keywords: ['paper cup'] },
+            { name: 'Plastic Cup', type: 'Non-Biodegradable', reusable: false, keywords: ['plastic cup', 'disposable cup'] },
             { name: 'Plastic Container', type: 'Non-Biodegradable', reusable: true, keywords: ['plastic container', 'container', 'tupperware'] },
-            { name: 'Food Waste', type: 'Biodegradable', reusable: false, keywords: ['food', 'leftover', 'meal', 'bread', 'pizza', 'burger'] },
+            { name: 'Food Waste', type: 'Biodegradable', reusable: false, keywords: ['food waste', 'leftover', 'meal', 'bread', 'pizza', 'burger', 'rice', 'kitchen waste'] },
             { name: 'Fruit Peel', type: 'Biodegradable', reusable: false, keywords: ['banana', 'apple', 'orange', 'fruit', 'peel'] },
-            { name: 'Vegetable Waste', type: 'Biodegradable', reusable: false, keywords: ['vegetable', 'leaf', 'plant'] },
-            { name: 'E-Waste Item', type: 'Non-Biodegradable', reusable: false, keywords: ['phone', 'laptop', 'computer', 'keyboard', 'screen', 'electronic'] },
+            { name: 'Vegetable Waste', type: 'Biodegradable', reusable: false, keywords: ['vegetable', 'leaf', 'leaves', 'plant', 'flower', 'grass', 'garden waste'] },
+            { name: 'E-Waste Item', type: 'Non-Biodegradable', reusable: false, keywords: ['phone', 'laptop', 'computer', 'keyboard', 'screen', 'electronic', 'charger', 'wire', 'cable', 'mouse', 'remote', 'battery'] },
             { name: 'Plastic Bag', type: 'Non-Biodegradable', reusable: true, keywords: ['plastic bag', 'bag', 'polythene'] },
             { name: 'Glass Item', type: 'Non-Biodegradable', reusable: true, keywords: ['glass'] },
             { name: 'Metal Scrap', type: 'Non-Biodegradable', reusable: false, keywords: ['metal', 'steel', 'aluminum', 'iron'] },
             { name: 'Wooden Item', type: 'Biodegradable', reusable: true, keywords: ['wood', 'wooden'] },
+            { name: 'Cloth/Textile Waste', type: 'Non-Biodegradable', reusable: true, keywords: ['cloth', 'fabric', 'textile', 'shirt', 'jeans', 'cotton'] },
             { name: 'Sports Ball', type: 'Non-Biodegradable', reusable: true, keywords: ['sports ball', 'tennis ball', 'soccer ball'] }
         ];
 
@@ -3663,9 +3677,11 @@
             const topPrediction = predictions[0] || { className: 'Unknown item', probability: 0.6 };
             const matchedRule = matchItemRule(predictions, currentFileName);
             const itemName = finalizeItemName(topPrediction, matchedRule, currentFileName, predictions);
-            const type = matchedRule ? matchedRule.type : inferWasteType(predictions, currentFileName);
-            const confidence = calculateConfidence(predictions, type);
-            const lowConfidence = confidence < MIN_CLASSIFICATION_CONFIDENCE;
+            const wasteScores = scoreWasteType(predictions, currentFileName);
+            const type = matchedRule ? matchedRule.type : inferWasteTypeFromScores(wasteScores);
+            const confidence = calculateConfidence(predictions, type, matchedRule, wasteScores);
+            const scoreGap = Math.abs(wasteScores.bioScore - wasteScores.nonBioScore);
+            const lowConfidence = confidence < MIN_CLASSIFICATION_CONFIDENCE || (!matchedRule && scoreGap < 0.1 && confidence < 72);
             const reusableLikely = isReusableItem(matchedRule, confidence);
             const points = (reusableLikely || lowConfidence) ? 0 : (type === 'Biodegradable' ? 15 : 10);
             const conditionNote = buildConditionMessage(itemName, type, confidence, matchedRule, currentImageQuality, reusableLikely);
@@ -3699,7 +3715,7 @@
                 });
             });
 
-            return combined.sort((a, b) => b.probability - a.probability).slice(0, 8);
+            return normalizePredictions(combined);
         }
 
         async function sleep(ms) {
@@ -3977,16 +3993,93 @@
         }
 
         function hasKeyword(text, keywords) {
-            return keywords.some(keyword => text.includes(keyword));
+            const normalized = normalizeWasteText(text);
+            return keywords.some(keyword => keywordMatches(normalized, keyword));
+        }
+
+        function normalizeWasteText(text) {
+            return (text || '')
+                .toLowerCase()
+                .replace(/[_-]+/g, ' ')
+                .replace(/[^a-z0-9\s]/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        function keywordMatches(text, keyword) {
+            const normalizedKeyword = normalizeWasteText(keyword);
+            if (!text || !normalizedKeyword) return false;
+            if (text.includes(normalizedKeyword)) return true;
+            const escaped = normalizedKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+            return new RegExp(`\\b${escaped}\\b`).test(text);
+        }
+
+        function keywordScore(text, keyword) {
+            const normalizedKeyword = normalizeWasteText(keyword);
+            if (!text || !normalizedKeyword) return 0;
+            if (text === normalizedKeyword) return 1.25;
+            if (text.includes(normalizedKeyword)) return normalizedKeyword.includes(' ') ? 1.15 : 1;
+            return keywordMatches(text, normalizedKeyword) ? 0.9 : 0;
+        }
+
+        function splitPredictionLabel(label) {
+            return normalizeWasteText(label)
+                .split(/\s*,\s*|\s+or\s+|\s+and\s+/)
+                .map(part => normalizeWasteText(part))
+                .filter(Boolean);
+        }
+
+        function normalizePredictions(predictions) {
+            const scoreMap = {};
+            predictions.forEach(prediction => {
+                const probability = Number(prediction.probability) || 0;
+                splitPredictionLabel(prediction.className).forEach(label => {
+                    scoreMap[label] = Math.max(scoreMap[label] || 0, probability);
+                });
+            });
+
+            return Object.entries(scoreMap)
+                .map(([className, probability]) => ({ className, probability }))
+                .sort((a, b) => b.probability - a.probability)
+                .slice(0, 10);
+        }
+
+        function scoreKeywordGroup(predictions, fileName, keywords) {
+            let score = 0;
+            predictions.slice(0, 8).forEach((prediction, index) => {
+                const label = normalizeWasteText(prediction.className);
+                const rankWeight = index === 0 ? 1 : (index === 1 ? 0.75 : index === 2 ? 0.55 : 0.35);
+                keywords.forEach(keyword => {
+                    const match = keywordScore(label, keyword);
+                    if (match) score += prediction.probability * rankWeight * match;
+                });
+            });
+
+            const normalizedFileName = normalizeWasteText(fileName);
+            if (normalizedFileName) {
+                keywords.forEach(keyword => {
+                    const match = keywordScore(normalizedFileName, keyword);
+                    if (match) score += 0.35 * match;
+                });
+            }
+
+            return score;
+        }
+
+        function scoreWasteType(predictions, fileName) {
+            return {
+                bioScore: scoreKeywordGroup(predictions, fileName, BIODEGRADABLE_KEYWORDS),
+                nonBioScore: scoreKeywordGroup(predictions, fileName, NON_BIODEGRADABLE_KEYWORDS)
+            };
         }
 
         function matchItemRule(predictions, fileName) {
-            const labels = predictions.slice(0, 3).map((prediction, index) => ({
-                label: prediction.className.toLowerCase(),
-                weight: prediction.probability * (index === 0 ? 1 : index === 1 ? 0.65 : 0.4)
+            const labels = predictions.slice(0, 8).map((prediction, index) => ({
+                label: normalizeWasteText(prediction.className),
+                weight: prediction.probability * (index === 0 ? 1 : index === 1 ? 0.75 : index === 2 ? 0.55 : 0.3)
             }));
 
-            const normalizedFileName = (fileName || '').toLowerCase();
+            const normalizedFileName = normalizeWasteText(fileName);
             let bestRule = null;
             let bestScore = 0;
 
@@ -3994,9 +4087,11 @@
                 let score = 0;
                 rule.keywords.forEach(keyword => {
                     labels.forEach(entry => {
-                        if (entry.label.includes(keyword)) score += entry.weight;
+                        const match = keywordScore(entry.label, keyword);
+                        if (match) score += entry.weight * match;
                     });
-                    if (normalizedFileName.includes(keyword)) score += 0.25;
+                    const fileMatch = keywordScore(normalizedFileName, keyword);
+                    if (fileMatch) score += 0.85 * fileMatch;
                 });
 
                 if (score > bestScore) {
@@ -4008,37 +4103,21 @@
             return bestScore >= MIN_RULE_CONFIDENCE ? bestRule : null;
         }
 
-        function inferWasteType(predictions, fileName) {
-            let bioScore = 0;
-            let nonBioScore = 0;
-
-            predictions.slice(0, 3).forEach((prediction, index) => {
-                const weight = index === 0 ? 1 : (index === 1 ? 0.65 : 0.4);
-                const label = prediction.className.toLowerCase();
-
-                if (hasKeyword(label, BIODEGRADABLE_KEYWORDS)) {
-                    bioScore += prediction.probability * weight;
-                }
-                if (hasKeyword(label, NON_BIODEGRADABLE_KEYWORDS)) {
-                    nonBioScore += prediction.probability * weight;
-                }
-            });
-
-            if (fileName) {
-                if (hasKeyword(fileName, BIODEGRADABLE_KEYWORDS)) bioScore += 0.2;
-                if (hasKeyword(fileName, NON_BIODEGRADABLE_KEYWORDS)) nonBioScore += 0.2;
-            }
-
+        function inferWasteTypeFromScores({ bioScore, nonBioScore }) {
             // Bias toward non-biodegradable if confidence is close.
             return bioScore > nonBioScore + 0.08 ? 'Biodegradable' : 'Non-Biodegradable';
         }
 
-        function calculateConfidence(predictions, type) {
+        function calculateConfidence(predictions, type, matchedRule = null, wasteScores = { bioScore: 0, nonBioScore: 0 }) {
             const topProbability = predictions[0] ? predictions[0].probability : 0.6;
             const secondProbability = predictions[1] ? predictions[1].probability : 0;
             const separationBonus = Math.max(0, topProbability - secondProbability) * 20;
+            const scoreGap = Math.abs((wasteScores.bioScore || 0) - (wasteScores.nonBioScore || 0));
+            const ruleBonus = matchedRule ? 14 : 0;
+            const evidenceBonus = Math.min(scoreGap * 18, 14);
+            const qualityPenalty = currentImageQuality === 'low' ? 8 : 0;
             const typeBias = type === 'Non-Biodegradable' ? 2 : 0;
-            let confidence = Math.round(Math.min(topProbability, 1) * 100 + separationBonus + typeBias);
+            let confidence = Math.round(Math.min(topProbability, 1) * 100 + separationBonus + evidenceBonus + ruleBonus + typeBias - qualityPenalty);
             confidence = Math.max(35, confidence);
             return Math.min(confidence, 99);
         }
