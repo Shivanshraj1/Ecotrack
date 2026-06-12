@@ -495,3 +495,4 @@ If you find EcoTrack useful, please ⭐ star this repository!
 
 ---
 
+Made with 💗 by SR
