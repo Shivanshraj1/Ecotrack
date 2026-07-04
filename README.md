@@ -493,6 +493,3 @@ If you find EcoTrack useful, please ⭐ star this repository!
 ### Rewards Marketplace
 ![Rewards](https://via.placeholder.com/800x450/2D5A27/ffffff?text=Rewards+Screenshot)
 
----
-
-Made with 💗 by SR
